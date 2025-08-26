@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ganexora - Complete EEG Health Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .app-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+            overflow: hidden;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 95vh;
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "chat dashboard reports";
+            grid-template-columns: 400px 1fr 300px;
+            grid-template-rows: auto 1fr;
+        }
+
+        .app-header {
+            grid-area: header;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .app-title h1 {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .developer-credit {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            text-align: right;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+        .chat-section {
+            grid-area: chat;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e0e0e0;
+            background: #f8f9fa;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.bot {
+            text-align: left;
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message-content {
+            display: inline-block;
+            max-width: 85%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .message.bot .message-content {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+            color: #1565c0;
+            border-bottom-left-radius: 6px;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        .typing-indicator {
+            display: none;
+            text-align: left;
+            margin-bottom: 15px;
+        }
+
+        .typing-indicator .message-content {
+            background: #e0e0e0;
+            color: #666;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            outline: none;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .chat-input input:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+        }
+
+        .quick-btn {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+            color: #1565c0;
+            border: 1px solid #bbdefb;
+            padding: 10px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .quick-btn:hover {
+            background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .dashboard-section {
+            grid-area: dashboard;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            overflow-y: auto;
+            max-height: 85vh;
+        }
+
+        .dashboard-content {
+            padding: 20px;
+        }
+
+        .upload-area {
+            border: 3px dashed #ccc;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+        }
+
+        .upload-area:hover {
+            border-color: #4facfe;
+            background: linear-gradient(135deg, #f0f8ff 0%, #e3f2fd 100%);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #4facfe;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            transform: scale(1.02);
+        }
+
+        .health-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border: 1px solid #e0e0e0;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .status-good { color: #4caf50; }
+        .status-warning { color: #ff9800; }
+        .status-alert { color: #f44336; }
+        .status-excellent { color: #2196f3; }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e0e0e0;
+        }
+
+        .chart-container h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .reports-section {
+            grid-area: reports;
+            background: white;
+            border-left: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .reports-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .reports-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .report-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .report-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .report-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .report-summary {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .report-date {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 8px;
+        }
+
+        .ai-insights {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+            border: 1px solid #c8e6c9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .ai-insights h4 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .insight-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            border-left: 4px solid #4caf50;
+        }
+
+        .medication-reminder {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border: 1px solid #ffb74d;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .medication-reminder h4 {
+            color: #ef6c00;
+            margin-bottom: 8px;
+        }
+
+        .medication-list {
+            font-size: 0.85rem;
+            color: #bf360c;
+        }
+
+        .file-analysis {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+            border: 1px solid #c8e6c9;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .analysis-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .voice-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .voice-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .voice-btn:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+
+        .voice-btn.listening {
+            background: #4caf50;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-areas: 
+                    "header header"
+                    "chat dashboard"
+                    "reports reports";
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto 1fr auto;
+            }
+        }
+
+        .customize-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            margin-left: 10px;
+        }
+
+        .customize-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+
+        .customization-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .customization-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+        }
+
+        .close-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .customization-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .theme-option {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        }
+
+        .theme-option:hover, .theme-option.active {
+            border-color: #4facfe;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+            transform: translateY(-2px);
+        }
+
+        .profile-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+        .profile-input:focus {
+            border-color: #4facfe;
+            outline: none;
+        }
+
+        .metric-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+            background: #ccc;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4facfe;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 21px;
+            height: 21px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(25px);
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 20px;
+            transition: all 0.2s;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-header">
+            <div class="app-title">
+                <div style="font-size: 2.5rem;">🧠</div>
+                <div>
+                    <h1>Ganexora</h1>
+                    <div style="font-size: 0.9rem; opacity: 0.9;">Advanced EEG Health Assistant</div>
+                </div>
+            </div>
+            <div class="developer-credit">
+                <div style="font-weight: 600;">Developed by</div>
+                <div>Sriganesh Venkatesan</div>
+            </div>
+            <div class="user-profile">
+                <div style="font-size: 1.5rem;">👤</div>
+                <div>
+                    <div style="font-weight: 600;">Patient Portal</div>
+                    <div style="font-size: 0.8rem;">ID: GX-2025-001</div>
+                </div>
+                <button class="customize-btn" onclick="openCustomization()">⚙️</button>
+            </div>
+        </div>
+        
+        <div class="chat-section">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="message-content">
+                        🌟 Welcome to Ganexora! I'm your advanced AI health assistant created by Sriganesh Venkatesan.
+                        
+                        I specialize in analyzing EEG data, monitoring health metrics, and providing personalized insights for people with neurological conditions. I can help with:
+                        
+                        • 🧠 EEG pattern analysis & interpretation<br>
+                        • 😴 Sleep quality optimization<br>
+                        • 💊 Medication reminders & tracking<br>
+                        • ⚡ Seizure risk assessment<br>
+                        • 📊 BMI & physical health monitoring<br>
+                        • 🎯 Personalized health recommendations
+                        
+                        Upload your EEG data or ask me anything about your brain health!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="message-content">Ganexora is analyzing...</div>
+            </div>
+            
+            <div class="chat-input">
+                <div class="input-group">
+                    <input type="text" id="messageInput" placeholder="Ask Ganexora about your health data, symptoms, or get medical insights...">
+                    <button class="send-btn" onclick="sendMessage()">Send</button>
+                </div>
+                <div class="voice-controls">
+                    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🎤 Voice</button>
+                    <button class="voice-btn" onclick="clearChat()">🗑️ Clear</button>
+                </div>
+                <div class="quick-actions">
+                    <button class="quick-btn" onclick="quickMessage('Analyze my latest EEG data')">📊 Analyze EEG</button>
+                    <button class="quick-btn" onclick="quickMessage('Check my sleep patterns')">😴 Sleep Analysis</button>
+                    <button class="quick-btn" onclick="quickMessage('How is my stress level?')">😰 Stress Check</button>
+                    <button class="quick-btn" onclick="quickMessage('Check my BMI and weight trends')">⚖️ BMI Status</button>
+                    <button class="quick-btn" onclick="quickMessage('Any seizure warnings?')">⚡ Seizure Risk</button>
+                    <button class="quick-btn" onclick="quickMessage('Medication reminders')">💊 Medications</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <div class="dashboard-content">
+                <div class="upload-area" id="uploadArea">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">📁</div>
+                    <h3 style="margin-bottom: 10px;">Upload Medical Data</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">
+                        Drag & drop EEG files, medical reports, or health data
+                    </p>
+                    <p style="color: #999; font-size: 0.8rem; margin-bottom: 15px;">
+                        Supports: .edf, .csv, .txt, .pdf, .xlsx
+                    </p>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        📂 Browse Files
+                    </button>
+                    <input type="file" id="fileInput" style="display: none;" accept=".csv,.edf,.txt,.pdf,.xlsx" multiple>
+                </div>
+                
+                <div class="file-analysis" id="fileAnalysis">
+                    <div class="analysis-status">
+                        <div class="status-indicator"></div>
+                        <span id="analysisText">Analyzing uploaded data...</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div id="analysisResults"></div>
+                </div>
+                
+                <div class="health-metrics">
+                    <div class="metric-card">
+                        <div class="metric-value status-good">Normal</div>
+                        <div class="metric-label">Brain Activity</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value status-warning">Moderate</div>
+                        <div class="metric-label">Stress Level</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value status-excellent">Excellent</div>
+                        <div class="metric-label">Sleep Quality</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value status-good">Low</div>
+                        <div class="metric-label">Seizure Risk</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value status-good">22.5</div>
+                        <div class="metric-label">BMI</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value status-good">120/80</div>
+                        <div class="metric-label">Blood Pressure</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Real-Time EEG Signal</h3>
+                    <canvas id="eegChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Brain Wave Frequency Bands</h3>
+                    <canvas id="frequencyChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Sleep Quality Trends</h3>
+                    <canvas id="sleepChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>24-Hour Stress Monitoring</h3>
+                    <canvas id="stressChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Seizure Risk Assessment</h3>
+                    <canvas id="seizureChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>BMI & Weight Tracking</h3>
+                    <canvas id="bmiChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>Health Overview Radar</h3>
+                    <canvas id="healthOverviewChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="reports-section">
+            <div class="reports-header">
+                <h2>📋 Health Reports</h2>
+                <p style="font-size: 0.9rem; opacity: 0.9;">AI-Generated Insights</p>
+            </div>
+            
+            <div class="reports-content">
+                <div class="medication-reminder">
+                    <h4>💊 Medication Reminder</h4>
+                    <div class="medication-list">
+                        <div>• Levetiracetam 500mg - Due in 2 hours</div>
+                        <div>• Vitamin D3 - Due tomorrow morning</div>
+                    </div>
+                </div>
+                
+                <div class="ai-insights">
+                    <h4>🤖 AI Health Insights</h4>
+                    <div class="insight-item">
+                        Your sleep quality has improved 23% this week. Keep maintaining your bedtime routine!
+                    </div>
+                    <div class="insight-item">
+                        Stress levels peak around 2 PM. Consider a short break or breathing exercise.
+                    </div>
+                    <div class="insight-item">
+                        BMI is in optimal range. Your weight stability supports medication effectiveness.
+                    </div>
+                </div>
+                
+                <div class="report-card" onclick="viewReport('daily')">
+                    <div class="report-title">📊 Daily Health Summary</div>
+                    <div class="report-summary">
+                        EEG patterns normal, sleep quality excellent (89%), stress moderate. BMI stable at 22.5.
+                    </div>
+                    <div class="report-date">Today, 2:30 PM</div>
+                </div>
+                
+                <div class="report-card" onclick="viewReport('weekly')">
+                    <div class="report-title">📈 Weekly Trends Analysis</div>
+                    <div class="report-summary">
+                        Significant improvement in sleep patterns. Stress management showing positive results.
+                    </div>
+                    <div class="report-date">This Week</div>
+                </div>
+                
+                <div class="report-card" onclick="viewReport('seizure')">
+                    <div class="report-title">⚡ Seizure Risk Report</div>
+                    <div class="report-summary">
+                        Low risk maintained. No concerning patterns detected in recent EEG data.
+                    </div>
+                    <div class="report-date">Last 30 Days</div>
+                </div>
+                
+                <div class="report-card" onclick="viewReport('medication')">
+                    <div class="report-title">💊 Medication Effectiveness</div>
+                    <div class="report-summary">
+                        Current medications showing good response. EEG stability improved 15%.
+                    </div>
+                    <div class="report-date">Monthly Review</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customization Modal -->
+        <div class="customization-modal" id="customizationModal">
+            <div class="customization-panel">
+                <div class="panel-header">
+                    <h2>⚙️ Customize Your Experience</h2>
+                    <button class="close-btn" onclick="closeCustomization()">×</button>
+                </div>
+                
+                <div class="customization-section">
+                    <div class="section-title">🎨 Theme Selection</div>
+                    <div class="theme-options">
+                        <div class="theme-option active" data-theme="default" onclick="selectTheme('default')">
+                            <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); width: 30px; height: 20px; border-radius: 5px; margin: 0 auto 5px;"></div>
+                            <div style="font-size: 0.8rem;">Ocean Blue</div>
+                        </div>
+                        <div class="theme-option" data-theme="dark" onclick="selectTheme('dark')">
+                            <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); width: 30px; height: 20px; border-radius: 5px; margin: 0 auto 5px;"></div>
+                            <div style="font-size: 0.8rem;">Dark Mode</div>
+                        </div>
+                        <div class="theme-option" data-theme="nature" onclick="selectTheme('nature')">
+                            <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); width: 30px; height: 20px; border-radius: 5px; margin: 0 auto 5px;"></div>
+                            <div style="font-size: 0.8rem;">Nature</div>
+                        </div>
+                        <div class="theme-option" data-theme="sunset" onclick="selectTheme('sunset')">
+                            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%); width: 30px; height: 20px; border-radius: 5px; margin: 0 auto 5px;"></div>
+                            <div style="font-size: 0.8rem;">Sunset</div>
+                        </div>
+                        <div class="theme-option" data-theme="purple" onclick="selectTheme('purple')">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 30px; height: 20px; border-radius: 5px; margin: 0 auto 5px;"></div>
+                            <div style="font-size: 0.8rem;">Purple</div>
+                        </div>
+                        <div class="theme-option" data-theme="medical" onclick="selectTheme('medical')">
+                            <div style="background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); width: 30px; height: 20px; border-radius: 5px; margin: 0 auto 5px;"></div>
+                            <div style="font-size: 0.8rem;">Medical</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="customization-section">
+                    <div class="section-title">👤 Profile Settings</div>
+                    <input type="text" class="profile-input" id="patientName" placeholder="Patient Name" value="John Doe">
+                    <input type="text" class="profile-input" id="patientId" placeholder="Patient ID" value="GX-2025-001">
+                    <input type="text" class="profile-input" id="doctorName" placeholder="Doctor Name" value="Dr. Smith">
+                </div>
+                
+                <div class="customization-section">
+                    <div class="section-title">📊 Dashboard Metrics</div>
+                    <div class="metric-toggle">
+                        <span>Brain Activity Monitor</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="metric-toggle">
+                        <span>Stress Level Tracking</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="metric-toggle">
+                        <span>Sleep Quality Analysis</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="metric-toggle">
+                        <span>Seizure Risk Assessment</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="metric-toggle">
+                        <span>BMI & Weight Tracking</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="metric-toggle">
+                        <span>Blood Pressure Monitor</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="customization-section">
+                    <div class="section-title">🔔 Notifications</div>
+                    <div class="metric-toggle">
+                        <span>Medication Reminders</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="metric-toggle">
+                        <span>Health Alerts</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="metric-toggle">
+                        <span>Daily Reports</span>
+                        <div class="toggle-switch active" onclick="toggleMetric(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="save-btn" onclick="saveCustomizations()">💾 Save Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced chatbot responses
+        const eegResponses = {
+            'analyze': [
+                "Based on your current EEG patterns, I can see normal brain wave activity with some elevated beta waves suggesting mild alertness. Your overall brain health looks good! The alpha waves show good relaxation patterns, and I don't detect any concerning spikes or irregularities.",
+                "Your EEG shows healthy alpha wave patterns during rest periods with good 8-12 Hz activity. The theta waves indicate excellent deep sleep phases. Your brain is showing signs of good recovery and rest. I recommend maintaining your current sleep schedule.",
+                "I notice some interesting patterns in the gamma frequency range (30-100 Hz). This could indicate high cognitive activity or mild stress. Your delta waves during sleep are strong, which is excellent for brain recovery."
+            ],
+            'sleep': [
+                "For better sleep quality based on your EEG patterns, I recommend: 1) Maintain a consistent bedtime routine, 2) Avoid screens 1 hour before bed, 3) Keep your room cool (65-68°F) and dark, 4) Try meditation or deep breathing exercises. Your current sleep efficiency is 89% which is excellent!",
+                "Your EEG shows fantastic REM sleep patterns! Your brain is getting quality rest. To enhance this further, try chamomile tea before bed and ensure you're getting 7-9 hours consistently. Your theta waves during deep sleep are particularly strong.",
+                "Based on your brain wave patterns, your sleep architecture looks great. I can see good transitions between sleep stages. Your slow-wave sleep (delta waves) is robust, which is crucial for memory consolidation and brain detoxification."
+            ],
+            'stress': [
+                "Your beta waves (13-30 Hz) show moderate elevation, indicating some stress or anxiety. I can see increased activity in the 15-25 Hz range. Try progressive muscle relaxation, deep breathing, or a 10-minute walk. Your stress levels peak around 2 PM - consider a break then.",
+                "Stress patterns in your EEG show as increased beta activity and reduced alpha waves. Your current stress level is manageable but could improve. Regular exercise, meditation, or yoga can help normalize these patterns. Your cortisol-related EEG markers suggest good recovery potential.",
+                "The stress markers in your EEG indicate your sympathetic nervous system is moderately active. This is normal but can be improved. I recommend mindfulness techniques, regular sleep schedule, and avoiding caffeine after 2 PM."
+            ],
+            'seizure': [
+                "Your current EEG patterns show no immediate seizure risk indicators. I'm not detecting any sharp waves, spikes, or epileptiform discharges. Your brain wave patterns are stable and within normal ranges. Continue taking prescribed medications as directed.",
+                "Excellent news! I don't detect any concerning seizure-related patterns like interictal spikes or sharp-slow wave complexes. Your EEG shows good background activity. Keep monitoring regularly and maintain medication compliance.",
+                "The seizure risk assessment looks very favorable. Your EEG baseline is stable, no abnormal discharges detected. However, always consult with your neurologist for professional medical advice. Your medication levels appear to be working well."
+            ],
+            'bmi': [
+                "Your current BMI of 22.5 is within the healthy range (18.5-24.9). This is excellent for overall brain health and reduces seizure risk factors. Maintaining this weight supports optimal medication absorption and reduces inflammation that could affect brain function.",
+                "Great job maintaining a healthy BMI! This supports good blood flow to the brain and can help with better sleep quality. Your weight stability also helps keep anti-seizure medication levels consistent, which is crucial for seizure control.",
+                "Your BMI trend shows positive stability over the past months. Maintaining a healthy weight reduces stress on your cardiovascular system and improves EEG patterns. Your current weight is ideal for your medication regimen."
+            ],
+            'weight': [
+                "Weight management is crucial for people with neurological conditions. A healthy BMI can improve medication effectiveness and reduce seizure triggers. Your current weight trends show excellent stability which supports consistent treatment outcomes.",
+                "Your weight tracking shows consistent progress. Regular monitoring helps identify patterns that might affect your brain health and sleep quality. Sudden weight changes can sometimes affect medication levels and brain wave patterns.",
+                "Maintaining stable weight is important for EEG consistency. Your weight stability over the past 6 months is excellent and correlates with your improved brain wave patterns and reduced seizure risk."
+            ],
+            'medication': [
+                "Based on your EEG patterns, your current medications appear to be working well. I can see good seizure control and stable brain wave patterns. Remember to take Levetiracetam as scheduled - consistency is key for maintaining therapeutic levels.",
+                "Your medication compliance has been excellent! The EEG data shows your brain is responding well to treatment. Your next dose of Levetiracetam 500mg is due in 2 hours. Don't forget your Vitamin D3 tomorrow morning.",
+                "Medication effectiveness looks great based on your neural patterns. Your brain waves show good stability, suggesting optimal drug levels. Always take medications at the same time each day for best results."
+            ],
+            'emergency': [
+                "I'm monitoring your EEG continuously and will alert you immediately if I detect any concerning patterns. Currently, all your vital signs and brain activity are within normal ranges. If you feel unwell, don't hesitate to contact your doctor.",
+                "Emergency protocols are active. Your current EEG shows stable patterns with no immediate concerns. If you experience any unusual symptoms like aura, confusion, or unusual sensations, please reach out to your healthcare team immediately.",
+                "All safety systems are functioning. Your brain activity is being monitored in real-time. I'll notify you of any changes that require medical attention. Your seizure risk remains low based on current patterns."
+            ],
+            'general': [
+                "I'm here to help you understand your brain health data and support your overall wellness journey. Feel free to ask about specific EEG patterns, medication effects, lifestyle recommendations, or any health concerns you might have.",
+                "Your comprehensive health data provides valuable insights into your neurological and physical wellbeing. I can help interpret patterns related to sleep, stress, attention, seizure risk, BMI, and medication effectiveness. What would you like to explore?",
+                "Brain health is crucial for overall quality of life. Your EEG monitoring combined with physical health tracking gives us a complete picture of your wellbeing. I'm here to make this complex data easy to understand and actionable."
+            ]
+        };
+
+        // Global variables
+        let charts = {};
+        let isVoiceActive = false;
+        let uploadedFiles = [];
+        let currentTheme = 'default';
+        let userPreferences = {
+            theme: 'default',
+            patientName: 'John Doe',
+            patientId: 'GX-2025-001',
+            doctorName: 'Dr. Smith',
+            metrics: {
+                brainActivity: true,
+                stress: true,
+                sleep: true,
+                seizureRisk: true,
+                bmi: true,
+                bloodPressure: true
+            },
+            notifications: {
+                medications: true,
+                alerts: true,
+                reports: true
+            }
+        };
+
+        // Customization functions
+        function openCustomization() {
+            document.getElementById('customizationModal').style.display = 'flex';
+            loadUserPreferences();
+        }
+
+        function closeCustomization() {
+            document.getElementById('customizationModal').style.display = 'none';
+        }
+
+        function selectTheme(theme) {
+            // Remove active class from all theme options
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            // Add active class to selected theme
+            document.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+            currentTheme = theme;
+        }
+
+        function toggleMetric(toggleElement) {
+            toggleElement.classList.toggle('active');
+        }
+
+        function loadUserPreferences() {
+            // Load saved preferences and update form
+            document.getElementById('patientName').value = userPreferences.patientName;
+            document.getElementById('patientId').value = userPreferences.patientId;
+            document.getElementById('doctorName').value = userPreferences.doctorName;
+            
+            // Set theme selection
+            selectTheme(userPreferences.theme);
+        }
+
+        function saveCustomizations() {
+            // Save user preferences
+            userPreferences.theme = currentTheme;
+            userPreferences.patientName = document.getElementById('patientName').value;
+            userPreferences.patientId = document.getElementById('patientId').value;
+            userPreferences.doctorName = document.getElementById('doctorName').value;
+            
+            // Apply theme
+            applyTheme(currentTheme);
+            
+            // Update profile display
+            updateProfileDisplay();
+            
+            // Show success message
+            addMessage(`✅ Customizations saved! Theme changed to ${currentTheme}, profile updated, and preferences applied.`, 'bot');
+            
+            // Close modal
+            closeCustomization();
+        }
+
+        function applyTheme(theme) {
+            const themeStyles = {
+                default: {
+                    primary: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                    secondary: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                },
+                dark: {
+                    primary: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
+                    secondary: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)',
+                    background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)'
+                },
+                nature: {
+                    primary: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                    secondary: 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)',
+                    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+                },
+                sunset: {
+                    primary: 'linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%)',
+                    secondary: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+                    background: 'linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%)'
+                },
+                purple: {
+                    primary: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    secondary: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                },
+                medical: {
+                    primary: 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)',
+                    secondary: 'linear-gradient(135deg, #00b894 0%, #00cec9 100%)',
+                    background: 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)'
+                }
+            };
+            
+            const selectedTheme = themeStyles[theme];
+            
+            // Apply theme to main elements
+            document.body.style.background = selectedTheme.background;
+            document.querySelector('.app-header').style.background = selectedTheme.primary;
+            document.querySelector('.reports-header').style.background = selectedTheme.secondary;
+            
+            // Update buttons with theme colors
+            document.querySelectorAll('.send-btn, .save-btn, .upload-btn').forEach(btn => {
+                btn.style.background = selectedTheme.primary;
+            });
+            
+            currentTheme = theme;
+        }
+
+        function updateProfileDisplay() {
+            const profileDiv = document.querySelector('.user-profile > div:nth-child(2)');
+            profileDiv.innerHTML = `
+                <div style="font-weight: 600;">${userPreferences.patientName}</div>
+                <div style="font-size: 0.8rem;">ID: ${userPreferences.patientId}</div>
+            `;
+        }
+
+        // Notification functions
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#4caf50' : type === 'warning' ? '#ff9800' : '#2196f3'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                z-index: 1001;
+                animation: slideInRight 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease-out';
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        // Enhanced chat functionality with theme awareness
+        // Chat functionality
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addMessage(message, 'user');
+                input.value = '';
+                
+                showTyping();
+                setTimeout(() => {
+                    hideTyping();
+                    const response = generateResponse(message);
+                    addMessage(response, 'bot');
+                }, 1500);
+            }
+        }
+
+        function quickMessage(message) {
+            document.getElementById('messageInput').value = message;
+            sendMessage();
+        }
+
+        function addMessage(content, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showTyping() {
+            document.getElementById('typingIndicator').style.display = 'block';
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        }
+
+        function hideTyping() {
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+
+        function generateResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (lowerMessage.includes('analyze') || lowerMessage.includes('data') || lowerMessage.includes('show') || lowerMessage.includes('eeg')) {
+                return getRandomResponse('analyze');
+            } else if (lowerMessage.includes('sleep') || lowerMessage.includes('dream') || lowerMessage.includes('rest')) {
+                return getRandomResponse('sleep');
+            } else if (lowerMessage.includes('stress') || lowerMessage.includes('anxiety') || lowerMessage.includes('worried')) {
+                return getRandomResponse('stress');
+            } else if (lowerMessage.includes('seizure') || lowerMessage.includes('epilepsy') || lowerMessage.includes('convulsion')) {
+                return getRandomResponse('seizure');
+            } else if (lowerMessage.includes('bmi') || lowerMessage.includes('weight') || lowerMessage.includes('body mass')) {
+                return getRandomResponse('bmi');
+            } else if (lowerMessage.includes('medication') || lowerMessage.includes('drug') || lowerMessage.includes('pill') || lowerMessage.includes('medicine')) {
+                return getRandomResponse('medication');
+            } else if (lowerMessage.includes('emergency') || lowerMessage.includes('help') || lowerMessage.includes('urgent') || lowerMessage.includes('warning')) {
+                return getRandomResponse('emergency');
+            } else {
+                return getRandomResponse('general');
+            }
+        }
+
+        function getRandomResponse(category) {
+            const responses = eegResponses[category];
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        function clearChat() {
+            const messagesContainer = document.getElementById('chatMessages');
+            messagesContainer.innerHTML = `
+                <div class="message bot">
+                    <div class="message-content">
+                        Chat cleared! I'm still here to help with your EEG analysis and health monitoring. What would you like to know?
+                    </div>
+                </div>
+            `;
+        }
+
+        // Voice functionality
+        function toggleVoice() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (!isVoiceActive) {
+                isVoiceActive = true;
+                voiceBtn.textContent = '🛑 Stop';
+                voiceBtn.classList.add('listening');
+                addMessage('🎤 Voice mode activated. Speak your question...', 'bot');
+                
+                // Simulate voice recognition
+                setTimeout(() => {
+                    isVoiceActive = false;
+                    voiceBtn.textContent = '🎤 Voice';
+                    voiceBtn.classList.remove('listening');
+                    addMessage('Voice input: "How is my brain activity today?"', 'user');
+                    setTimeout(() => {
+                        addMessage('Your brain activity is showing excellent patterns today! Alpha waves are strong, indicating good relaxation, and your overall neural rhythm is very healthy.', 'bot');
+                    }, 1000);
+                }, 3000);
+            } else {
+                isVoiceActive = false;
+                voiceBtn.textContent = '🎤 Voice';
+                voiceBtn.classList.remove('listening');
+            }
+        }
+
+        // File upload functionality
+        function initFileUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', handleFileUpload);
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                handleFiles(files);
+            });
+        }
+
+        function handleFileUpload(e) {
+            handleFiles(e.target.files);
+        }
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            const fileAnalysis = document.getElementById('fileAnalysis');
+            const progressFill = document.getElementById('progressFill');
+            const analysisText = document.getElementById('analysisText');
+            const analysisResults = document.getElementById('analysisResults');
+            
+            fileAnalysis.style.display = 'block';
+            
+            for (let file of files) {
+                uploadedFiles.push(file);
+                addMessage(`📁 File uploaded: ${file.name} (${(file.size / 1024).toFixed(1)} KB). Ganexora is analyzing your data...`, 'bot');
+            }
+            
+            // Simulate file analysis progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15 + 5;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(progressInterval);
+                    completeAnalysis(files);
+                }
+                progressFill.style.width = progress + '%';
+                
+                if (progress < 30) {
+                    analysisText.textContent = 'Reading file structure...';
+                } else if (progress < 60) {
+                    analysisText.textContent = 'Processing EEG signals...';
+                } else if (progress < 90) {
+                    analysisText.textContent = 'Analyzing brain wave patterns...';
+                } else {
+                    analysisText.textContent = 'Generating insights...';
+                }
+            }, 500);
+        }
+
+        function completeAnalysis(files) {
+            const analysisResults = document.getElementById('analysisResults');
+            const fileTypes = Array.from(files).map(f => f.name.split('.').pop().toLowerCase());
+            
+            let analysisMessage = `✅ Analysis complete! I've processed ${files.length} file(s). `;
+            
+            if (fileTypes.includes('edf') || fileTypes.includes('csv')) {
+                analysisMessage += `I found ${Math.floor(Math.random() * 500 + 1000)} EEG data points spanning ${Math.floor(Math.random() * 8 + 4)} hours of recording. `;
+            }
+            
+            analysisMessage += `Your brain patterns show normal activity with some areas for optimization. I've updated all your health charts with the latest data!`;
+            
+            analysisResults.innerHTML = `
+                <div style="background: white; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                    <h4 style="color: #2e7d32; margin-bottom: 10px;">📋 Analysis Summary</h4>
+                    <div style="font-size: 0.9rem; line-height: 1.4;">
+                        <p><strong>Files Processed:</strong> ${files.length}</p>
+                        <p><strong>Data Points:</strong> ${Math.floor(Math.random() * 500 + 1000)}</p>
+                        <p><strong>Recording Duration:</strong> ${Math.floor(Math.random() * 8 + 4)} hours</p>
+                        <p><strong>Quality Score:</strong> ${Math.floor(Math.random() * 20 + 80)}%</p>
+                        <p style="margin-top: 10px; color: #4caf50;"><strong>Status:</strong> Normal patterns detected ✅</p>
+                    </div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                addMessage(analysisMessage, 'bot');
+                updateAllCharts();
+                updateMetrics();
+            }, 1000);
+        }
+
+        // Chart initialization and management
+        function initAllCharts() {
+            initEEGChart();
+            initFrequencyChart();
+            initSleepChart();
+            initStressChart();
+            initSeizureChart();
+            initBMIChart();
+            initHealthOverviewChart();
+        }
+
+        function initEEGChart() {
+            const ctx = document.getElementById('eegChart').getContext('2d');
+            const labels = [];
+            const data = [];
+            for (let i = 0; i < 200; i++) {
+                labels.push((i * 0.01).toFixed(2));
+                data.push(Math.sin(i * 0.2) * 50 + Math.sin(i * 0.05) * 30 + Math.random() * 10 - 5);
+            }
+            
+            charts.eeg = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'EEG Signal (μV)',
+                        data: data,
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        borderWidth: 1.5,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Time (seconds)' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Amplitude (μV)' }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function initFrequencyChart() {
+            const ctx = document.getElementById('frequencyChart').getContext('2d');
+            
+            charts.frequency = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Delta (0.5-4Hz)', 'Theta (4-8Hz)', 'Alpha (8-13Hz)', 'Beta (13-30Hz)', 'Gamma (30-100Hz)'],
+                    datasets: [{
+                        label: 'Power (μV²)',
+                        data: [25, 35, 45, 30, 15],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 205, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 205, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Power (μV²)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initSleepChart() {
+            const ctx = document.getElementById('sleepChart').getContext('2d');
+            const sleepData = [];
+            const sleepLabels = [];
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - (6 - i));
+                sleepLabels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                sleepData.push(Math.random() * 25 + 75);
+            }
+            
+            charts.sleep = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sleepLabels,
+                    datasets: [{
+                        label: 'Sleep Quality (%)',
+                        data: sleepData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#667eea',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 60,
+                            max: 100,
+                            title: { display: true, text: 'Quality (%)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Last 7 Days' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initStressChart() {
+            const ctx = document.getElementById('stressChart').getContext('2d');
+            const stressData = [];
+            const stressLabels = [];
+            
+            for (let i = 0; i < 24; i++) {
+                stressLabels.push(`${i}:00`);
+                let stress = 30 + Math.sin((i - 6) * Math.PI / 12) * 20 + Math.random() * 15;
+                if (i >= 9 && i <= 17) stress += 20;
+                stressData.push(Math.max(0, Math.min(100, stress)));
+            }
+            
+            charts.stress = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: stressLabels,
+                    datasets: [{
+                        label: 'Stress Level (%)',
+                        data: stressData,
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Stress Level (%)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time of Day' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initSeizureChart() {
+            const ctx = document.getElementById('seizureChart').getContext('2d');
+            const seizureData = [];
+            const seizureLabels = [];
+            
+            for (let i = 0; i < 30; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - (29 - i));
+                seizureLabels.push(date.getDate());
+                let risk = Math.random() * 8;
+                if (Math.random() < 0.05) risk += Math.random() * 25;
+                seizureData.push(Math.min(100, risk));
+            }
+            
+            charts.seizure = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: seizureLabels,
+                    datasets: [{
+                        label: 'Seizure Risk (%)',
+                        data: seizureData,
+                        backgroundColor: seizureData.map(val => 
+                            val > 30 ? 'rgba(255, 99, 132, 0.8)' : 
+                            val > 15 ? 'rgba(255, 205, 86, 0.8)' : 
+                            'rgba(75, 192, 192, 0.8)'
+                        ),
+                        borderColor: seizureData.map(val => 
+                            val > 30 ? 'rgba(255, 99, 132, 1)' : 
+                            val > 15 ? 'rgba(255, 205, 86, 1)' : 
+                            'rgba(75, 192, 192, 1)'
+                        ),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Risk Level (%)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Last 30 Days' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initBMIChart() {
+            const ctx = document.getElementById('bmiChart').getContext('2d');
+            const bmiData = [];
+            const weightData = [];
+            const bmiLabels = [];
+            
+            for (let i = 0; i < 6; i++) {
+                const date = new Date();
+                date.setMonth(date.getMonth() - (5 - i));
+                bmiLabels.push(date.toLocaleDateString('en-US', { month: 'short' }));
+                const baseBMI = 24.5 - (i * 0.2);
+                bmiData.push(baseBMI + (Math.random() - 0.5) * 0.8);
+                weightData.push(65 + (bmiData[i] - 22) * 2.5);
+            }
+            
+            charts.bmi = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: bmiLabels,
+                    datasets: [{
+                        label: 'BMI',
+                        data: bmiData,
+                        borderColor: '#ff9500',
+                        backgroundColor: 'rgba(255, 149, 0, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#ff9500',
+                        pointBorderColor: '#ff9500',
+                        pointRadius: 6,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Weight (kg)',
+                        data: weightData,
+                        borderColor: '#34c759',
+                        backgroundColor: 'rgba(52, 199, 89, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointBackgroundColor: '#34c759',
+                        pointBorderColor: '#34c759',
+                        pointRadius: 4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'top' } },
+                    scales: {
+                        x: { title: { display: true, text: 'Last 6 Months' } },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'BMI' },
+                            min: 18,
+                            max: 30
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'Weight (kg)' },
+                            grid: { drawOnChartArea: false },
+                            min: 50,
+                            max: 80
+                        }
+                    }
+                }
+            });
+        }
+
+        function initHealthOverviewChart() {
+            const ctx = document.getElementById('healthOverviewChart').getContext('2d');
+            
+            charts.healthOverview = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        'Sleep Quality',
+                        'Stress Management',
+                        'Brain Activity',
+                        'Physical Health',
+                        'BMI Status',
+                        'Seizure Control',
+                        'Overall Wellness'
+                    ],
+                    datasets: [{
+                        label: 'Current Status',
+                        data: [85, 65, 90, 78, 88, 95, 82],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#667eea',
+                        pointRadius: 5
+                    }, {
+                        label: 'Target Goals',
+                        data: [90, 85, 95, 90, 85, 98, 90],
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointBackgroundColor: '#4facfe',
+                        pointBorderColor: '#4facfe',
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'top' } },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { stepSize: 20 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateAllCharts() {
+            // Update EEG Chart
+            if (charts.eeg) {
+                const newData = [];
+                for (let i = 0; i < 200; i++) {
+                    newData.push(Math.sin(i * 0.15) * 60 + Math.sin(i * 0.08) * 25 + Math.random() * 12 - 6);
+                }
+                charts.eeg.data.datasets[0].data = newData;
+                charts.eeg.update('none');
+            }
+            
+            // Update Frequency Chart
+            if (charts.frequency) {
+                const newFreqData = [
+                    Math.random() * 15 + 20,
+                    Math.random() * 20 + 30,
+                    Math.random() * 25 + 40,
+                    Math.random() * 20 + 25,
+                    Math.random() * 8 + 12
+                ];
+                charts.frequency.data.datasets[0].data = newFreqData;
+                charts.frequency.update('none');
+            }
+            
+            // Update Sleep Chart
+            if (charts.sleep) {
+                const newSleepData = charts.sleep.data.datasets[0].data.map(() => 
+                    Math.random() * 25 + 75
+                );
+                charts.sleep.data.datasets[0].data = newSleepData;
+                charts.sleep.update('none');
+            }
+        }
+
+        function updateMetrics() {
+            const metrics = document.querySelectorAll('.metric-value');
+            const newStatuses = ['Excellent', 'Low', 'Great', 'Very Low', '22.3', '118/78'];
+            const newClasses = ['status-excellent', 'status-good', 'status-excellent', 'status-good', 'status-good', 'status-good'];
+            
+            metrics.forEach((metric, index) => {
+                if (newStatuses[index]) {
+                    metric.textContent = newStatuses[index];
+                    metric.className = `metric-value ${newClasses[index]}`;
+                }
+            });
+        }
+
+        // Report functionality
+        function viewReport(reportType) {
+            const reportMessages = {
+                'daily': 'Here\'s your daily health summary: EEG patterns are excellent today with strong alpha waves indicating good relaxation. Sleep quality was 89% last night with 2.5 hours of deep sleep. Stress levels moderate but manageable. BMI stable at 22.3 - perfect range!',
+                'weekly': 'Weekly analysis shows remarkable improvement! Your sleep quality increased 23% this week, stress management techniques are working well, and EEG patterns show increased stability. Keep up the great work with your routine!',
+                'seizure': 'Seizure risk assessment: Excellent news! No concerning patterns detected in the last 30 days. Your medication compliance has maintained stable brain wave patterns. Risk remains very low. Continue current treatment plan.',
+                'medication': 'Medication effectiveness report: Your Levetiracetam is working excellently - EEG stability improved 15% since starting current dosage. Brain wave patterns show optimal medication absorption. No side effects detected in neural patterns.'
+            };
+            
+            addMessage(reportMessages[reportType], 'bot');
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            initFileUpload();
+            initAllCharts();
+            
+            // Load saved preferences on startup
+            applyTheme(userPreferences.theme);
+            updateProfileDisplay();
+            
+            // Add notification for customization feature
+            setTimeout(() => {
+                showNotification('Click the ⚙️ button to customize your experience!', 'info');
+            }, 2000);
+            
+            document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Close modal when clicking outside
+            document.getElementById('customizationModal').addEventListener('click', (e) => {
+                if (e.target.id === 'customizationModal') {
+                    closeCustomization();
+                }
+            });
+        });
+
+        // Utility functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Real-time data simulation
+        setInterval(() => {
+            if (charts.eeg && uploadedFiles.length > 0) {
+                const currentData = charts.eeg.data.datasets[0].data;
+                currentData.shift();
+                currentData.push(Math.sin(Date.now() * 0.01) * 50 + Math.random() * 10 - 5);
+                charts.eeg.update('none');
+            }
+        }, 100);
+    </script>
+</body>
+</html>
